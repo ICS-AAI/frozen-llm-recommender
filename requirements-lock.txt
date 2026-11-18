@@ -1,4 +1,4 @@
-# Exact package versions of the clean environment (Python 3.13.5, 2026-11-18) in which the checks of release 1.0.1 passed:
+# Exact package versions of the clean environment (Python 3.13.5, 2026-11-18) in which the README commands of release 1.0.1 were run from a fresh clone:
 # pip freeze of a new virtual environment after pip install -r requirements.txt (requirements.txt is unpinned).
 annotated-types==0.8.0
 anthropic==2.10.0

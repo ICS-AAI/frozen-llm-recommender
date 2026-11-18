@@ -9,8 +9,9 @@ automatically on OpenAI), asks up to three times when the answer is empty or tru
 limit. Scoring functions compute normalized regret of a ranking against held-out accuracies, map flows to estimator
 families, and build leave-one-task-out family portfolios. The repository ships the rankings, ground truth and API logs of
 the study in the paper "Frozen LLMs as Recommenders for AutoML Pipeline Selection: Can We Trust the Evaluation?" (TAE
-workshop at NeurIPS 2026), and scripts that reproduce Tables 4 and 5 of that paper and the point estimates and p-values of
-Tables 1 and 2 from them without API keys or OpenML access. It is meant for researchers in AutoML and meta-learning who want to check or extend that evaluation.
+workshop at NeurIPS 2026), and scripts that reproduce from them Tables 4 and 5 of that paper and, from Tables 1 and 2 the nregret@1 of the eleven LLMs and the three trained baselines, the hit@1 and
+Spearman of the LLMs, and the differences and p-values against the portfolio, without API keys
+or OpenML access. It is meant for researchers in AutoML and meta-learning who want to check or extend that evaluation.
 Reproducing the tables needs Python and the packages in `requirements.txt`; new model runs need an API key and a task
 pack, which are not included.
 
@@ -27,8 +28,8 @@ pip install -r requirements.txt
 ```
 
 Tested with Python 3.13.5. `requirements.txt` lists numpy, pandas, scipy, scikit-learn, statsmodels, joblib, anthropic and
-openai (unpinned). `requirements-lock.txt` records the exact versions of the environment in which the checks of this release
-passed; install them with `pip install -r requirements-lock.txt`. The harness was checked only with stand-in API clients (no request was sent); it has not been run
+openai (unpinned). `requirements-lock.txt` records the exact versions of the clean environment in which the README
+commands were run from a fresh clone; install them with `pip install -r requirements-lock.txt`. The harness was checked only with stand-in API clients (no request was sent); it has not been run
 against the APIs with the package versions installed here. Run the commands of the next three sections from the
 repository root.
 
@@ -39,7 +40,7 @@ Use the clone.
 ## Quick start (no API key)
 
 ```bash
-python reproduce_tables.py    # Table 5 and the point estimates and p-values of Tables 1 and 2
+python reproduce_tables.py    # Table 5, and the values of Tables 1 and 2 listed under "Reproducing the paper"
 python table4.py              # Table 4, the Llama-Turbo control and the Appendix A determinism check
 ```
 
@@ -125,8 +126,8 @@ Code and data for the paper
 > *Frozen LLMs as Recommenders for AutoML Pipeline Selection: Can We Trust the Evaluation?*
 > TAE (Trust-AI-Eval): Can We Trust AI Evaluation? — workshop at NeurIPS 2026.
 
-This repository lets anyone **reproduce Tables 4 and 5 and the point estimates and p-values of Tables 1 and 2 from the
-released CSVs with no API keys and no OpenML access**. New runs of the evaluation need inputs that are not included (see
+This repository lets anyone **reproduce Tables 4 and 5 and, from Tables 1 and 2 the nregret@1 of the eleven LLMs and the three trained baselines, the hit@1 and Spearman of the LLMs, and the differences and p-values against the portfolio,
+from the released CSVs with no API keys and no OpenML access**. New runs of the evaluation need inputs that are not included (see
 "Commands that need inputs not included in this repository").
 
 ### Quick reproduction (no API, ~10 s)
@@ -145,7 +146,7 @@ serving-determinism check of Appendix A. Both read only `results/`.
 ### What's here
 
 ```
-reproduce_tables.py          reproduce Table 5 and the point estimates and p-values of Tables 1, 2 from the CSVs
+reproduce_tables.py          reproduce Table 5 and the values of Tables 1, 2 listed above from the CSVs
 table4.py                    reproduce Table 4 + Turbo control + Appendix A determinism check
 requirements.txt
 src/
