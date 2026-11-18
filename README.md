@@ -284,14 +284,11 @@ The software:
 @software{neruda2026frozenllmrecommender,
   author  = {Neruda, Roman},
   title   = {frozen-llm-recommender},
-  version = {1.0.1},
   year    = {2026},
   doi     = {10.5281/zenodo.24354617},
   url     = {https://github.com/ICS-AAI/frozen-llm-recommender}
 }
 ```
-
-The DOI above (10.5281/zenodo.24354617) covers all versions; to cite exactly version 1.0.1, use its version DOI 10.5281/zenodo.24354619.
 
 The paper:
 

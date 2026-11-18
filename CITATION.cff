@@ -4,10 +4,6 @@ type: software
 title: "frozen-llm-recommender"
 version: "1.0.1"
 doi: "10.5281/zenodo.24354617"
-identifiers:
-  - type: doi
-    value: "10.5281/zenodo.24354619"
-    description: "Version DOI of release 1.0.1 (tag v1.0.1-tae); the doi field above is the concept DOI (all versions)"
 authors:
   - family-names: "Neruda"
     given-names: "Roman"
