@@ -27,7 +27,8 @@ pip install -r requirements.txt
 ```
 
 Tested with Python 3.13.5. `requirements.txt` lists numpy, pandas, scipy, scikit-learn, statsmodels, joblib, anthropic and
-openai (unpinned). The harness was checked only with stand-in API clients (no request was sent); it has not been run
+openai (unpinned). `requirements-lock.txt` records the exact versions of the environment in which the checks of this release
+passed; install them with `pip install -r requirements-lock.txt`. The harness was checked only with stand-in API clients (no request was sent); it has not been run
 against the APIs with the package versions installed here. Run the commands of the next three sections from the
 repository root.
 
