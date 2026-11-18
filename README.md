@@ -1,4 +1,108 @@
-# Frozen LLMs as Recommenders for AutoML Pipeline Selection: Can We Trust the Evaluation? — code & data
+# frozen-llm-recommender
+
+A Python harness and dataset for evaluating frozen large language models (LLMs) as recommenders of machine-learning
+pipelines. The harness gives an LLM the anonymized meta-features of a dataset and a catalog of candidate pipelines (OpenML
+flows), asks it to rank the candidates, parses the returned ranking, and logs every API call (request and response ids,
+served model, stop reason, token usage). It talks to Anthropic models and to OpenAI-compatible endpoints (OpenAI,
+DeepInfra), sends the shared prompt prefix (instructions and catalog) so that it can be cached (explicitly on
+Anthropic, automatically on OpenAI), re-asks empty or truncated answers up to three times, and can stop a run at a
+spending limit. Scoring functions compute normalized regret of a ranking against held-out accuracies, map flows to
+estimator families, and build leave-one-task-out family portfolios. The repository ships the rankings, ground truth and API
+logs of the study described in the paper below, and scripts that reproduce every table of that paper from them without API
+keys or OpenML access. It is meant for researchers in AutoML and meta-learning who want to check or extend that
+evaluation. Reproducing the tables needs Python and the packages in `requirements.txt`; new model runs need an API key and
+a task pack (see "Commands that need inputs not included in this repository").
+
+Repository: https://github.com/ICS-AAI/frozen-llm-recommender (formerly `b3ck3tt/paper-tae`; the old address redirects here).
+
+## Installation
+
+```bash
+git clone https://github.com/ICS-AAI/frozen-llm-recommender.git
+cd frozen-llm-recommender
+python -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Tested with Python 3.13.5. `requirements.txt` lists numpy, pandas, scipy, scikit-learn, statsmodels, joblib, anthropic and
+openai (unpinned). Run the commands below from the repository root.
+
+There is no `pyproject.toml`: the scripts read the shipped data from `results/` in the clone, and the harness resolves its
+default input and output paths from the repository location, so an installed copy (outside the clone) would not find them.
+Use the clone.
+
+## Quick start (no API key)
+
+```bash
+python reproduce_tables.py    # Tables 1, 2 and 5 of the paper
+python table4.py              # Table 4, the Llama-Turbo control and the Appendix A determinism check
+```
+
+Both read only `results/` and print to the terminal.
+
+## Usage
+
+Scoring and family functions (`table4.py`; importing it runs nothing):
+
+```python
+import table4 as t
+truth = t.load_truth("results/cc18/ground_truth_cc18.csv")       # task -> candidates with accuracies and families
+rankings = t.load_rankings("results/cc18/rankings_cc18.csv")     # model -> task -> ranked candidate ids
+model = "claude-haiku-4-5-20251001"
+scores = [t.nreg_flow(r, truth[k]) for k, r in rankings[model].items() if k in truth]   # nregret@1 per task
+scores = [s for s in scores if s is not None]                    # tasks where all candidates tie are undefined
+print(model, len(scores), round(sum(scores) / len(scores), 3))
+```
+
+Other functions in `table4.py`: `family(flow_name)` (flow name -> estimator family by regular expressions, else "other"),
+`nreg_fam` and `fam_order` (family-level regret and order), `family_portfolios(truth)` (leave-one-task-out family
+portfolios ordered by mean member accuracy (a) or by best member (b)), `bh(p)` (Benjamini–Hochberg), `compare` (Wilcoxon
+signed-rank against a baseline, with BH), `boot_ci`, `paired`. Any CSV in the formats below can be scored the same way.
+
+```bash
+python -c "import table4 as t; print(t.family('sklearn.ensemble.forest.RandomForestClassifier(13)'))"   # random_forest
+```
+
+Harness helpers (`src/llm_paper4.py`; importing it creates nothing):
+
+```bash
+python -c "import sys; sys.path.insert(0, 'src'); from llm_paper4 import _parse_ranking; print(_parse_ranking('F3, F1, F9, F3', {'F1', 'F3', 'F7'}))"
+# ['F3', 'F1']: valid ids in order of first appearance
+python -c "import sys; sys.path.insert(0, 'src'); from llm_paper4 import _provider_and_model as p; print(p('gpt-5-mini'), p('deepinfra:deepseek-ai/DeepSeek-V3'), p('claude-haiku-4-5-20251001'))"
+# ('openai', 'gpt-5-mini') ('deepinfra', 'deepseek-ai/DeepSeek-V3') ('anthropic', 'claude-haiku-4-5-20251001')
+```
+
+### Commands that need inputs not included in this repository
+
+The harness modes need a task pack (`pack.joblib`), and new runs need an API key. Neither is shipped.
+
+| command | needs | where it comes from |
+|---|---|---|
+| `python src/llm_paper4.py build` | `data/minimal_cache_cc18/longtail_collected.joblib` and `data/minimal_cache_cc18/longtail_tasks.joblib` | the authors' OpenML long-tail cache, collected from the OpenML API by code that is not part of this repository |
+| `P4_PACK=<pack.joblib> python src/llm_paper4.py dryrun` | a task pack | written by `build`; without `P4_PACK` the default `results/results_recommender_paper4/pack.joblib`, which is built first (and so needs the cache) |
+| `P4_PACK=<pack.joblib> P4_OUT=<dir> python src/llm_paper4.py run <model> [N]` | a task pack and the provider's API key (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY` or `DEEPINFRA_API_KEY`, or `~/.anthropic_key`, `~/.openai_key`, `~/.deepinfra_key`) | the pack as above; the key from the provider |
+| `python src/llm_paper4.py eval` | the pack, the run outputs and `results/results_recommender_longtail_full/ranking_metrics_per_task.csv` | the authors' trained-baseline run (not shipped) |
+| `python src/llm_sig.py` | `results_recommender_paper4/llm_metrics_per_task.csv` and `results_recommender_longtail_full/ranking_metrics_per_task.csv`, relative to the working directory | the authors' working directories (not shipped in that layout) |
+| `src/llm_pack_cc18_p4.py`, `src/llm_pack_turbo50.py`, `src/run_cc18_rerun.py`, `src/score_cc18_rerun.py` | the authors' `results/` and `data/` layout (CC18 OpenML cache, packs) | not shipped; `table4.py` is the self-contained equivalent of the scoring |
+
+A task pack is a joblib file holding a dict: `prefix` (instructions + catalog, sent as the cached system prompt), `packs` (a
+list of `{"tid", "suffix", "cids"}`: task id, per-task prompt with the meta-features and candidate ids, candidate ids),
+`truth` (task id -> list of `{"flow_id", "acc", "cat"}`) and `fid2cat` (flow id -> candidate id). `dryrun` prints a token
+and cost estimate per model for a pack without a key (prices in `PRICING` are approximate). `run` writes, under `P4_OUT`,
+`llm_<model>.joblib` (rankings and attempts per task), `responses.jsonl` (raw answer texts) and `api_log.jsonl`: one line
+per attempt with `tid`, `attempt`, `ts`, `model`, `request_id`, `response_id`, `resp_model`, `stop`, `truncated`, `inp`,
+`out`, `cw`, `cr` (input, output, cache-write and cache-read tokens) and `n_parsed`, or `error` for a failed request.
+`P4_BUDGET_DIRS` (colon-separated output directories) and `P4_BUDGET_STOP` (dollars) stop a run before a new task once the
+logged spend of those directories reaches the limit.
+
+## Data shipped with the package
+
+`results/` holds 27 files, 11,561,792 bytes in total: CSV tables and JSON-lines API logs from the study (the 200-task
+long-tail study, the October 2026 re-run on the OpenML-CC18 tasks, and the 50-task Llama-Turbo control).
+Formats and provenance are listed under "What's here" in the next section.
+
+## Reproducing the paper (TAE workshop at NeurIPS 2026)
 
 Code and data for the paper
 
@@ -9,7 +113,7 @@ Code and data for the paper
 This repository lets anyone **reproduce every table from the released CSVs with no API keys and no
 OpenML access**, and re-run the full evaluation from scratch if desired.
 
-## Quick reproduction (no API, ~10 s)
+### Quick reproduction (no API, ~10 s)
 
 ```bash
 pip install -r requirements.txt
@@ -22,7 +126,7 @@ BH-corrected — 10/11 worse) and Table 5 (task-invariance / degeneracy of top-1
 Table 4 with and without the "other" family bucket, the Llama-Turbo (FP8) control and the DeepSeek-V3
 serving-determinism check of Appendix A. Both read only `results/`.
 
-## What's here
+### What's here
 
 ```
 reproduce_tables.py          reproduce Tables 1, 2, 5 from the CSVs
@@ -61,7 +165,7 @@ results/
   turbo50/                   Llama-Turbo (FP8) control on 50 long-tail tasks: rankings, task list, API log
 ```
 
-## CC18 re-run (October 2026) and changes to Table 4
+### CC18 re-run (October 2026) and changes to Table 4
 
 The CC18 column of Table 4 comes from a re-run on 27 Oct 2026 of all eleven configurations with this
 harness and prompt on the 69 OpenML-CC18 tasks with at least 15 scikit-learn candidates (catalog 1,475
@@ -102,7 +206,7 @@ Changes relative to the submitted version of the paper:
   (every such request id is present in the API log). API-log lines with no entry in that map are earlier
   attempts whose results were superseded when the task was asked again, or requests that failed.
 
-## Supplementary all-toolkit CC18 pack (Sec. 4.3)
+### Supplementary all-toolkit CC18 pack (Sec. 4.3)
 
 The same harness, prompt and retry rule on all 72 OpenML-CC18 tasks with candidates from all toolkits
 (catalog 3,073 flows; `src/llm_pack_cc18_p4.py`, pack A). Eight configurations were run: DeepSeek-V3 and
@@ -113,7 +217,10 @@ common set has 71 tasks. On it no model is significantly better than the flow po
 significantly worse (BH q < 0.05); no model is significantly better than family portfolio (a). Full output:
 `results/cc18_all/score_cc18_all.md`. This pack is not part of Table 4, and `table4.py` does not read it.
 
-## Re-running the LLM evaluation (needs API keys)
+### Re-running the LLM evaluation (needs API keys and inputs not included here)
+
+These commands need the inputs listed under "Commands that need inputs not included in this repository" (the OpenML
+long-tail cache for `build`, a task pack and an API key for `run`, the trained-baseline file for `eval`).
 
 The harness infers the provider from the model id and reads each provider's key from an env var or
 `~/.<provider>_key` (Anthropic / OpenAI / DeepInfra). The prompt (instructions + flow catalog) is cached;
@@ -131,7 +238,32 @@ Notes: OpenAI reasoning models must run at low `reasoning_effort` (default effor
 terminate on large-candidate ranking prompts — see the paper's Threats section). DeepInfra does not
 prefix-cache. Per-task token usage is logged (used for the effort analysis).
 
-## Citation
+## Changes in 1.0.1
+
+`src/llm_paper4.py` resolves its default paths from the repository location and creates its output directory only when it
+writes; in 1.0 it created `results/results_recommender_paper4` relative to the working directory at import, so
+`cd src; python llm_paper4.py build` failed at import. Prompts, parsing, scoring, model settings and outputs are unchanged.
+
+## Author, licence and owner
+
+Software: Roman Neruda, Institute of Computer Science of the Czech Academy of Sciences. Licence: MIT (see `LICENSE`);
+copyright (c) 2026 Roman Neruda, Institute of Computer Science of the Czech Academy of Sciences.
+
+## How to cite
+
+The software:
+
+```bibtex
+@software{neruda2026frozenllmrecommender,
+  author  = {Neruda, Roman},
+  title   = {frozen-llm-recommender},
+  version = {1.0.1},
+  year    = {2026},
+  url     = {https://github.com/ICS-AAI/frozen-llm-recommender}
+}
+```
+
+The paper:
 
 ```bibtex
 @inproceedings{neruda2026frozenllm,
@@ -142,6 +274,8 @@ prefix-cache. Per-task token usage is logged (used for the effort analysis).
 }
 ```
 
-## License
+## Funding and acknowledgement
 
-MIT, see `LICENSE`.
+This work was supported by the Czech Academy of Sciences under the Strategy AV21 research programme *Epicentres of
+Civilization – Intelligent Households, Technology and Society* (StrategieAV21/37), and by the institutional support
+RVO: 67985807.
