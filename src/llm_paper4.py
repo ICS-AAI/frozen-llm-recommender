@@ -25,7 +25,8 @@ Keep the SAME pack (build once) so every vendor ranks the identical tasks/candid
 import warnings; warnings.filterwarnings("ignore")
 import sys, os, json, re, time, joblib, numpy as np, pandas as pd
 from pathlib import Path
-OUT = Path(os.environ.get("P4_OUT", "results/results_recommender_paper4")); OUT.mkdir(exist_ok=True)
+ROOT = Path(__file__).resolve().parents[1]   # repository root: default paths are resolved from here, not from the cwd
+OUT = Path(os.environ.get("P4_OUT", ROOT / "results" / "results_recommender_paper4"))   # created when first written
 SCR = Path("scratch")
 # Sub-experiments (full-1236 stability, repeated runs) override output dir / pack path so they don't
 # collide with the main 200-task results. Default: pack lives inside OUT.
@@ -87,8 +88,8 @@ def clean_flow(name):
     return n.strip()[:80]
 
 def load_longtail():
-    coll = joblib.load("data/minimal_cache_cc18/longtail_collected.joblib")
-    tasks_all = joblib.load("data/minimal_cache_cc18/longtail_tasks.joblib")
+    coll = joblib.load(ROOT / "data/minimal_cache_cc18/longtail_collected.joblib")
+    tasks_all = joblib.load(ROOT / "data/minimal_cache_cc18/longtail_tasks.joblib")
     ev = pd.concat(coll["evals"].values(), ignore_index=True)
     ev["flow_id"] = pd.to_numeric(ev["flow_id"], errors="coerce"); ev["value"] = pd.to_numeric(ev["value"], errors="coerce")
     ev = ev.dropna(subset=["flow_id","value"]); ev["flow_id"] = ev["flow_id"].astype(int)
@@ -126,6 +127,7 @@ def build():
                   f"Rank ALL of these candidate IDs best-to-worst, comma-separated:")
         packs.append({"tid": int(tid), "suffix": suffix, "cids": cids})
         truth[int(tid)] = g[["flow_id","acc"]].assign(cat=g["flow_id"].map(fid2cat)).to_dict("records")
+    PACK.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump({"prefix": prefix, "packs": packs, "truth": truth, "fid2cat": fid2cat},
                 PACK)
     ntok_prefix = est_tokens(prefix)
@@ -246,6 +248,7 @@ def run(model, N=None):
         client = OpenAI(api_key=_load_key(provider), base_url=_BASEURL[provider],
                         timeout=900.0, max_retries=2)   # 900s: bounded-reasoning calls can still run a few min
     print(f"provider={provider} api_model={api_model}" + (" (+thinking)" if think else ""))
+    OUT.mkdir(parents=True, exist_ok=True)
     resfile = OUT / f"llm_{_safe(model)}.joblib"
     done = joblib.load(resfile) if resfile.exists() else {}
     usage_tot = dict(inp=0, out=0, cw=0, cr=0)
@@ -350,7 +353,7 @@ def evaluate():
     print(L.groupby("model").agg(n=("tid","nunique"), nregret1=("nregret@1","mean"),
                                  hit1=("hit@1","mean"), spearman=("spearman","mean")).round(4).to_string())
     tasks = set(L["tid"])
-    pt = pd.read_csv("results/results_recommender_longtail_full/ranking_metrics_per_task.csv")
+    pt = pd.read_csv(ROOT / "results/results_recommender_longtail_full/ranking_metrics_per_task.csv")
     pt = pt[(pt.experiment=="tfidf_meta") & (pt.task_id.isin(tasks))]
     print(f"\nbaselines on the same {len(tasks)} tasks:")
     print(pt.groupby("method").agg(nregret1=("nregret@1","mean"), hit1=("hit@1","mean"),
