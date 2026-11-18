@@ -38,7 +38,7 @@ Use the clone.
 ## Quick start (no API key)
 
 ```bash
-python reproduce_tables.py    # Tables 1, 2 and 5 of the paper
+python reproduce_tables.py    # Table 5 and the point estimates and p-values of Tables 1 and 2
 python table4.py              # Table 4, the Llama-Turbo control and the Appendix A determinism check
 ```
 
@@ -124,8 +124,9 @@ Code and data for the paper
 > *Frozen LLMs as Recommenders for AutoML Pipeline Selection: Can We Trust the Evaluation?*
 > TAE (Trust-AI-Eval): Can We Trust AI Evaluation? — workshop at NeurIPS 2026.
 
-This repository lets anyone **reproduce every table from the released CSVs with no API keys and no
-OpenML access**, and re-run the full evaluation from scratch if desired.
+This repository lets anyone **reproduce Tables 4 and 5 and the point estimates and p-values of Tables 1 and 2 from the
+released CSVs with no API keys and no OpenML access**. New runs of the evaluation need inputs that are not included (see
+"Commands that need inputs not included in this repository").
 
 ### Quick reproduction (no API, ~10 s)
 
@@ -143,7 +144,7 @@ serving-determinism check of Appendix A. Both read only `results/`.
 ### What's here
 
 ```
-reproduce_tables.py          reproduce Tables 1, 2, 5 from the CSVs
+reproduce_tables.py          reproduce Table 5 and the point estimates and p-values of Tables 1, 2 from the CSVs
 table4.py                    reproduce Table 4 + Turbo control + Appendix A determinism check
 requirements.txt
 src/
