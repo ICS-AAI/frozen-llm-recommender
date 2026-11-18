@@ -9,8 +9,8 @@ automatically on OpenAI), asks up to three times when the answer is empty or tru
 limit. Scoring functions compute normalized regret of a ranking against held-out accuracies, map flows to estimator
 families, and build leave-one-task-out family portfolios. The repository ships the rankings, ground truth and API logs of
 the study in the paper "Frozen LLMs as Recommenders for AutoML Pipeline Selection: Can We Trust the Evaluation?" (TAE
-workshop at NeurIPS 2026), and scripts that reproduce Tables 1, 2, 4 and 5 of that paper from them without API keys or
-OpenML access. It is meant for researchers in AutoML and meta-learning who want to check or extend that evaluation.
+workshop at NeurIPS 2026), and scripts that reproduce Tables 4 and 5 of that paper and the point estimates and p-values of
+Tables 1 and 2 from them without API keys or OpenML access. It is meant for researchers in AutoML and meta-learning who want to check or extend that evaluation.
 Reproducing the tables needs Python and the packages in `requirements.txt`; new model runs need an API key and a task
 pack, which are not included.
 
@@ -27,8 +27,9 @@ pip install -r requirements.txt
 ```
 
 Tested with Python 3.13.5. `requirements.txt` lists numpy, pandas, scipy, scikit-learn, statsmodels, joblib, anthropic and
-openai (unpinned); with the versions installed on 2026-11-18 the harness was checked only up to the first API request (no
-call was made). Run the commands of the next three sections from the repository root.
+openai (unpinned). The harness was checked only with stand-in API clients (no request was sent); it has not been run
+against the APIs with the package versions installed here. Run the commands of the next three sections from the
+repository root.
 
 There is no `pyproject.toml`: the scripts read the shipped data from `results/` in the clone, and the harness resolves its
 default input and output paths from the repository location, so an installed copy (outside the clone) would not find them.
@@ -260,7 +261,7 @@ writes; in 1.0 it created `results/results_recommender_paper4` relative to the w
 ## Author, licence and owner
 
 Software: Roman Neruda, Institute of Computer Science of the Czech Academy of Sciences. Licence: MIT (see `LICENSE`).
-Owner and copyright holder, as in `LICENSE`: Roman Neruda, Institute of Computer Science of the Czech Academy of Sciences.
+Copyright holder, as in `LICENSE`: Roman Neruda, Institute of Computer Science of the Czech Academy of Sciences.
 
 ## How to cite
 
