@@ -1,5 +1,7 @@
 # frozen-llm-recommender
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24354617.svg)](https://doi.org/10.5281/zenodo.24354617)
+
 A Python harness and dataset for evaluating frozen large language models (LLMs) as recommenders of machine-learning
 pipelines. The harness gives an LLM the anonymized meta-features of a dataset and a catalog of candidate pipelines (OpenML
 flows), asks it to rank the candidates, parses the returned ranking, and logs every attempt it makes (request and response
@@ -276,9 +278,12 @@ The software:
   title   = {frozen-llm-recommender},
   version = {1.0.1},
   year    = {2026},
+  doi     = {10.5281/zenodo.24354617},
   url     = {https://github.com/ICS-AAI/frozen-llm-recommender}
 }
 ```
+
+The DOI above (10.5281/zenodo.24354617) covers all versions; to cite exactly version 1.0.1, use its version DOI 10.5281/zenodo.24354619.
 
 The paper:
 
