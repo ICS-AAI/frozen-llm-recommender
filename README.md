@@ -2,18 +2,19 @@
 
 A Python harness and dataset for evaluating frozen large language models (LLMs) as recommenders of machine-learning
 pipelines. The harness gives an LLM the anonymized meta-features of a dataset and a catalog of candidate pipelines (OpenML
-flows), asks it to rank the candidates, parses the returned ranking, and logs every API call (request and response ids,
-served model, stop reason, token usage). It talks to Anthropic models and to OpenAI-compatible endpoints (OpenAI,
-DeepInfra), sends the shared prompt prefix (instructions and catalog) so that it can be cached (explicitly on
-Anthropic, automatically on OpenAI), re-asks empty or truncated answers up to three times, and can stop a run at a
-spending limit. Scoring functions compute normalized regret of a ranking against held-out accuracies, map flows to
-estimator families, and build leave-one-task-out family portfolios. The repository ships the rankings, ground truth and API
-logs of the study described in the paper below, and scripts that reproduce every table of that paper from them without API
-keys or OpenML access. It is meant for researchers in AutoML and meta-learning who want to check or extend that
-evaluation. Reproducing the tables needs Python and the packages in `requirements.txt`; new model runs need an API key and
-a task pack (see "Commands that need inputs not included in this repository").
+flows), asks it to rank the candidates, parses the returned ranking, and logs every attempt it makes (request and response
+ids, served model, stop reason, token usage). It talks to Anthropic models and to OpenAI-compatible endpoints (OpenAI,
+DeepInfra), sends the shared prompt prefix (instructions and catalog) so that it can be cached (explicitly on Anthropic,
+automatically on OpenAI), asks up to three times when the answer is empty or truncated, and can stop a run at a spending
+limit. Scoring functions compute normalized regret of a ranking against held-out accuracies, map flows to estimator
+families, and build leave-one-task-out family portfolios. The repository ships the rankings, ground truth and API logs of
+the study in the paper "Frozen LLMs as Recommenders for AutoML Pipeline Selection: Can We Trust the Evaluation?" (TAE
+workshop at NeurIPS 2026), and scripts that reproduce Tables 1, 2, 4 and 5 of that paper from them without API keys or
+OpenML access. It is meant for researchers in AutoML and meta-learning who want to check or extend that evaluation.
+Reproducing the tables needs Python and the packages in `requirements.txt`; new model runs need an API key and a task
+pack, which are not included.
 
-Repository: https://github.com/ICS-AAI/frozen-llm-recommender (formerly `b3ck3tt/paper-tae`; the old address redirects here).
+Repository: https://github.com/ICS-AAI/frozen-llm-recommender (the repository address printed in the TAE paper redirects here).
 
 ## Installation
 
@@ -26,7 +27,8 @@ pip install -r requirements.txt
 ```
 
 Tested with Python 3.13.5. `requirements.txt` lists numpy, pandas, scipy, scikit-learn, statsmodels, joblib, anthropic and
-openai (unpinned). Run the commands below from the repository root.
+openai (unpinned); with the versions installed on 2026-11-18 the harness was checked only up to the first API request (no
+call was made). Run the commands of the next three sections from the repository root.
 
 There is no `pyproject.toml`: the scripts read the shipped data from `results/` in the clone, and the harness resolves its
 default input and output paths from the repository location, so an installed copy (outside the clone) would not find them.
@@ -51,20 +53,28 @@ truth = t.load_truth("results/cc18/ground_truth_cc18.csv")       # task -> candi
 rankings = t.load_rankings("results/cc18/rankings_cc18.csv")     # model -> task -> ranked candidate ids
 model = "claude-haiku-4-5-20251001"
 scores = [t.nreg_flow(r, truth[k]) for k, r in rankings[model].items() if k in truth]   # nregret@1 per task
-scores = [s for s in scores if s is not None]                    # tasks where all candidates tie are undefined
+scores = [s for s in scores if s is not None]                    # None: all candidates tie, or no ranked id is a candidate
 print(model, len(scores), round(sum(scores) / len(scores), 3))
 ```
 
 Other functions in `table4.py`: `family(flow_name)` (flow name -> estimator family by regular expressions, else "other"),
 `nreg_fam` and `fam_order` (family-level regret and order), `family_portfolios(truth)` (leave-one-task-out family
 portfolios ordered by mean member accuracy (a) or by best member (b)), `bh(p)` (Benjamini–Hochberg), `compare` (Wilcoxon
-signed-rank against a baseline, with BH), `boot_ci`, `paired`. Any CSV in the formats below can be scored the same way.
+signed-rank against a baseline, with BH), `boot_ci`, `paired`. `load_truth` needs a `flow_name` column; for
+`results/ground_truth.csv`, which has none, pass the catalog:
+
+```python
+import pandas as pd, table4 as t
+names = pd.read_csv("results/catalog.csv")[["candidate_id", "flow_name"]]
+truth = t.load_truth("results/ground_truth.csv", names)          # the 200 long-tail tasks
+print(len(truth))
+```
 
 ```bash
 python -c "import table4 as t; print(t.family('sklearn.ensemble.forest.RandomForestClassifier(13)'))"   # random_forest
 ```
 
-Harness helpers (`src/llm_paper4.py`; importing it creates nothing):
+Harness helpers (`src/llm_paper4.py`; importing it creates no output directory):
 
 ```bash
 python -c "import sys; sys.path.insert(0, 'src'); from llm_paper4 import _parse_ranking; print(_parse_ranking('F3, F1, F9, F3', {'F1', 'F3', 'F7'}))"
@@ -75,7 +85,8 @@ python -c "import sys; sys.path.insert(0, 'src'); from llm_paper4 import _provid
 
 ### Commands that need inputs not included in this repository
 
-The harness modes need a task pack (`pack.joblib`), and new runs need an API key. Neither is shipped.
+`build` writes a task pack (`pack.joblib`) from the authors' OpenML cache; `dryrun`, `run` and `eval` read a pack; new runs
+need an API key. The cache, the packs and keys are not shipped.
 
 | command | needs | where it comes from |
 |---|---|---|
@@ -98,8 +109,10 @@ logged spend of those directories reaches the limit.
 
 ## Data shipped with the package
 
-`results/` holds 27 files, 11,561,792 bytes in total: CSV tables and JSON-lines API logs from the study (the 200-task
-long-tail study, the October 2026 re-run on the OpenML-CC18 tasks, and the 50-task Llama-Turbo control).
+`results/` holds 27 files, 11,561,792 bytes in total: 21 CSV tables, 5 JSON-lines files (3 API logs and 2 re-ask
+archives) and 1 Markdown score report. They come from the 200-task long-tail study (with the leakage ablation and the
+seed-123 replication), the August 2026 DeepSeek-V3 run and the October 2026 re-run on the OpenML-CC18 tasks, the
+all-toolkit CC18 pack, and the 50-task Llama-Turbo control.
 Formats and provenance are listed under "What's here" in the next section.
 
 ## Reproducing the paper (TAE workshop at NeurIPS 2026)
@@ -246,8 +259,8 @@ writes; in 1.0 it created `results/results_recommender_paper4` relative to the w
 
 ## Author, licence and owner
 
-Software: Roman Neruda, Institute of Computer Science of the Czech Academy of Sciences. Licence: MIT (see `LICENSE`);
-copyright (c) 2026 Roman Neruda, Institute of Computer Science of the Czech Academy of Sciences.
+Software: Roman Neruda, Institute of Computer Science of the Czech Academy of Sciences. Licence: MIT (see `LICENSE`).
+Owner and copyright holder, as in `LICENSE`: Roman Neruda, Institute of Computer Science of the Czech Academy of Sciences.
 
 ## How to cite
 
