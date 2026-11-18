@@ -2,6 +2,14 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24354617.svg)](https://doi.org/10.5281/zenodo.24354617)
 
+Software for evaluating how well large language models recommend machine-learning pipelines
+for a given dataset. It contains a harness for querying the models and scoring their
+recommendations, and the data of a study on OpenML tasks.
+
+Anthropic models and OpenAI-compatible services are supported.
+
+## What it does in detail
+
 A Python harness and dataset for evaluating frozen large language models (LLMs) as recommenders of machine-learning
 pipelines. The harness gives an LLM the anonymized meta-features of a dataset and a catalog of candidate pipelines (OpenML
 flows), asks it to rank the candidates, parses the returned ranking, and logs every attempt it makes (request and response
